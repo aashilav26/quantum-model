@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quantum Atom Model</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+    .label {
+      position: absolute;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Add container for labels -->
+  <div id="labels" style="position:absolute;top:0;left:0;pointer-events:none"></div>
+
+  <!-- Correct Three.js and OrbitControls versions -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    // Scene setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 20;
+
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Orbit Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    // Nucleus
+    const nucleusGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+    const nucleusMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
+    scene.add(nucleus);
+
+    // Orbit creation function
+    function createOrbit(radius, axis = 'x') {
+      const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2 * Math.PI, false, 0);
+      const points = curve.getPoints(100);
+      const geometry = new THREE.BufferGeometry().setFromPoints(points.map(p => {
+        if (axis === 'x') return new THREE.Vector3(0, p.x, p.y);
+        if (axis === 'y') return new THREE.Vector3(p.x, 0, p.y);
+        return new THREE.Vector3(p.x, p.y, 0);
+      }));
+      const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+      const orbit = new THREE.Line(geometry, material);
+      scene.add(orbit);
+    }
+
+    // Create orbitals
+    createOrbit(5, 'x'); // 2px orbital
+    createOrbit(5, 'y'); // 2py orbital
+    createOrbit(5, 'z'); // 2pz orbital
+
+    // Electron creation
+    function createElectron(color) {
+      const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+      const material = new THREE.MeshBasicMaterial({ color: color });
+      return new THREE.Mesh(geometry, material);
+    }
+
+    const e1 = createElectron(0xffff00); // e- in 2pz
+    const e2 = createElectron(0x00ff00); // e- in 2py
+    const e3 = createElectron(0x00ffff); // e- in 2px
+    const e4 = createElectron(0xff00ff); // e- in 1s (extra orbital)
+    scene.add(e1, e2, e3, e4);
+
+    // Label creation function
+    function createLabel(text) {
+      const div = document.createElement('div');
+      div.className = 'label';
+      div.textContent = text;
+      document.getElementById('labels').appendChild(div);
+      return div;
+    }
+
+    const label1 = createLabel('2pz Electron');
+    const label2 = createLabel('2py Electron');
+    const label3 = createLabel('2px Electron');
+    const label4 = createLabel('1s Electron');
+    const labelNucleus = createLabel('Nucleus');
+
+    function updateLabel(label, position) {
+      const vector = position.clone().project(camera);
+      const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+      label.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+    }
+
+    let angle = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      angle += 0.02;
+
+      // Electron positions
+      e1.position.set(0, 5 * Math.sin(angle), 5 * Math.cos(angle)); // 2pz
+      e2.position.set(5 * Math.sin(angle), 0, 5 * Math.cos(angle)); // 2py
+      e3.position.set(5 * Math.sin(angle), 5 * Math.cos(angle), 0); // 2px
+      e4.position.set(5 * Math.cos(angle), 5 * Math.sin(angle), 0); // 1s
+
+      // Update labels
+      updateLabel(label1, e1.position);
+      updateLabel(label2, e2.position);
+      updateLabel(label3, e3.position);
+      updateLabel(label4, e4.position);
+      updateLabel(labelNucleus, nucleus.position);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
